@@ -1,0 +1,50 @@
+{
+    "try2@gmail.com": {
+        "password": "123456",
+        "profile": {
+            "name": "try2",
+            "age": 25,
+            "gender": "Female",
+            "height": 171.0,
+            "weight": 75.0,
+            "body_type": "Mesomorph",
+            "goal": "Cut"
+        }
+    },
+    "try": {
+        "password": "1234",
+        "profile": {
+            "name": "dom",
+            "age": 25,
+            "gender": "Male",
+            "height": 171.0,
+            "weight": 74.0,
+            "body_type": "Mesomorph",
+            "goal": "Maintain"
+        }
+    },
+    "try@gmail.com": {
+        "password": "12345",
+        "profile": {
+            "name": "try",
+            "age": 25,
+            "gender": "Female",
+            "height": 75.0,
+            "weight": 171.0,
+            "body_type": "Mesomorph",
+            "goal": "Maintain"
+        }
+    },
+    "email": {
+        "password": "1234",
+        "profile": {
+            "name": "dom",
+            "age": 25,
+            "gender": "male",
+            "height": 171.0,
+            "weight": 75.0,
+            "body_type": "meso",
+            "goal": "cut"
+        }
+    }
+}

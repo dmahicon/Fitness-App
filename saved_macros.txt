@@ -1,0 +1,3 @@
+Egg:2
+Oats:2
+Apple:1
