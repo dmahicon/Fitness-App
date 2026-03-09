@@ -81,7 +81,9 @@ vars_user = [
 ]
 # ---------------- UPDATE LANDING DASHBOARD ----------------
 def update_landing_dashboard():
+
     if "landing" in frames:
+
         landing = frames["landing"]
 
         if hasattr(landing, "update_meal_display"):
@@ -89,7 +91,6 @@ def update_landing_dashboard():
 
         if hasattr(landing, "update_workout_display"):
             landing.update_workout_display()
-  
 # ---------------- DATA ----------------
 foods = {
     "Chicken": {"p": 31, "c": 0, "f": 3, "cal": 165, "vitA": 5, "vitC": 0, "ca": 15, "fe": 1.3, "vitD": 0, "img": "images/chicken.png", "cat": "Protein"},
@@ -178,7 +179,14 @@ macro_targets = {
         "Snack": []
     }
 }
+# ---------------- SHARED GENERATED WORKOUT ----------------
 
+generated_today_workout = []
+generated_today_info = {
+    "split": "",
+    "day": "",
+    "difficulty": ""
+}
 
 def fade_in(alpha=0.0):
     alpha += 0.05
@@ -356,7 +364,8 @@ landing = build_landing_page(
     update_landing_dashboard=update_landing_dashboard,
     foods=foods,
     images=images,
-    user_info=user_profile
+    user_info=user_profile,generated_today_workout=generated_today_workout,
+    generated_today_info=generated_today_info 
 )
 frames["landing"] = landing
 # ---------------- START ----------------

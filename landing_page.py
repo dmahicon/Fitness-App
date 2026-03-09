@@ -5,16 +5,27 @@ import datetime
 import random
 today = datetime.date.today().isoformat()
 
-
 image_cache = {}
 
 def build_landing_page(
-    root, frames, show_frame, BASE_DIR, clickable_card,
-    macro_targets, workout_splits, exercises,
-    build_macro_page, build_workout_page,
-    open_edit_mode, 
-    logout_callback, update_landing_dashboard,
-    foods=None, images=None, calendar_plan=None, user_info=None 
+    root,
+    frames,
+    show_frame,
+    BASE_DIR,
+    clickable_card,
+    macro_targets,
+    workout_splits,
+    exercises,
+    build_macro_page,
+    build_workout_page,
+    open_edit_mode,
+    logout_callback,
+    update_landing_dashboard,
+    foods,
+    images,
+    user_info,
+    generated_today_workout,
+    generated_today_info
 ):
 
     if images is None:
@@ -33,7 +44,6 @@ def build_landing_page(
         "Dinner": [],
         "Snack": []
     })
-
 
     top_bar = tk.Frame(
         landing,
@@ -62,6 +72,7 @@ def build_landing_page(
                             text=initial,
                             font=("Segoe UI", 20, "bold"),
                             fill="black")
+
     menu = tk.Menu(
         root,
         tearoff=0,
@@ -79,11 +90,11 @@ def build_landing_page(
 
     menu.add_separator()
 
-
     menu.add_command(
         label="🚪 Logout",
         command=logout_callback
     )
+
     def open_menu(event):
         try:
             menu.tk_popup(event.x_root, event.y_root)
@@ -91,13 +102,13 @@ def build_landing_page(
             menu.grab_release()
 
     canvas_icon.bind("<Button-1>", open_menu)
+
     tk.Label(top_bar,
              text="💪 FITNESS DASHBOARD 🚀",
              fg="#00ffcc",
              bg="#111821",
              font=("Segoe UI", 24, "bold")
              ).place(relx=0.5, rely=0.5, anchor="center")
-
 
     if macro_targets.get("last_date") != today:
         macro_targets["meals"] = {
@@ -107,6 +118,7 @@ def build_landing_page(
             "Snack": []
         }
         macro_targets["last_date"] = today
+
     content = tk.Frame(landing, bg="#0b0f14")
     content.pack(fill="both", expand=True, padx=40, pady=30)
 
@@ -121,6 +133,10 @@ def build_landing_page(
             frame.config(highlightthickness=1, highlightbackground="#00ffcc")
         frame.bind("<Enter>", on_enter)
         frame.bind("<Leave>", on_leave)
+
+    # =========================
+    # MEALS PANEL
+    # =========================
 
     meals_frame = tk.Frame(content, bg="#1a1f27",
                            highlightbackground="#00ffcc",
@@ -215,15 +231,14 @@ def build_landing_page(
                             photo = ImageTk.PhotoImage(img)
                             landing.image_refs.append(photo)
 
-                            img_label = tk.Label(img_frame,
-                                                 image=photo,
-                                                 bg="#222831")
-                            img_label.pack()
+                            tk.Label(img_frame,
+                                     image=photo,
+                                     bg="#222831").pack()
 
-                            calories = data.get("calories", 0)
-                            protein = data.get("protein", 0)
-                            carbs = data.get("carbs", 0)
-                            fats = data.get("fats", 0)
+                            calories = data.get("cal", 0)
+                            protein = data.get("p", 0)
+                            carbs = data.get("c", 0)
+                            fats = data.get("f", 0)
 
                             tk.Label(img_frame,
                                      text=f"{calories} kcal",
@@ -256,6 +271,9 @@ def build_landing_page(
 
     landing.update_meal_display = update_meal_display
 
+    # =========================
+    # WORKOUT PANEL
+    # =========================
 
     workout_frame = tk.Frame(content, bg="#1a1f27",
                              highlightbackground="#00ffcc",
@@ -270,144 +288,159 @@ def build_landing_page(
              font=("Segoe UI", 20, "bold")
              ).pack(pady=18)
 
-    workout_container = tk.Frame(workout_frame, bg="#1a1f27")
-    workout_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+    workout_container = tk.Frame(workout_frame, bg="#1a1f27", height=360)
+    workout_container.pack(fill="x", padx=20, pady=(0, 20))
+    workout_container.pack_propagate(False)
+
+    canvas = tk.Canvas(workout_container, bg="#1a1f27", highlightthickness=0)
+    scrollbar = tk.Scrollbar(workout_container, orient="vertical", command=canvas.yview)
+
+    scroll_frame = tk.Frame(canvas, bg="#1a1f27")
+
+    scroll_frame.bind("<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+
+    canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    def _on_mousewheel(event):
+        if event.delta:
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        elif event.num == 4:
+            canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            canvas.yview_scroll(1, "units")
+
+    canvas.bind("<Enter>", lambda e: canvas.bind_all("<MouseWheel>", _on_mousewheel))
+    canvas.bind("<Leave>", lambda e: canvas.unbind_all("<MouseWheel>"))
+
+    # =========================
+    # WORKOUT DISPLAY
+    # =========================
 
     def update_workout_display():
 
-        for widget in workout_container.winfo_children():
+        canvas.yview_moveto(0)
+
+        for widget in scroll_frame.winfo_children():
             widget.destroy()
 
-        current_plan = workout_splits.get("current_plan", "PPL")
-        current_day = workout_splits.get("current_day", "Push")
-        difficulty = workout_splits.get("current_difficulty", "Beginner")
+        total_cal = sum(ex.get("cal", 0) for ex in generated_today_workout)
 
-        tk.Label(workout_container,
-                text=f"📋 {current_plan} Split • 🎯 {difficulty}",
-                fg="#ffaa00",
+        header = tk.Frame(scroll_frame, bg="#1a1f27")
+        header.pack(fill="x", pady=(0,5))
+
+        tk.Label(
+            header,
+            text=f"📋 {generated_today_info.get('split','')} • {generated_today_info.get('difficulty','')}",
+            fg="#ffaa00",
+            bg="#1a1f27",
+            font=("Segoe UI", 12, "bold")
+        ).pack(side="left")
+
+        tk.Label(
+            header,
+            text=f"🔥 {total_cal} kcal",
+            fg="#ff4d4d",
+            bg="#1a1f27",
+            font=("Segoe UI", 12, "bold")
+        ).pack(side="right")
+
+        tk.Label(
+            scroll_frame,
+            text=f"💪 Today: {generated_today_info.get('day','')}",
+            fg="#00ffcc",
+            bg="#1a1f27",
+            font=("Segoe UI", 14, "bold")
+        ).pack(anchor="w", pady=5)
+
+        stats = tk.Frame(scroll_frame, bg="#1a1f27")
+        stats.pack(fill="x", pady=6)
+
+        bmi = generated_today_info.get("bmi","--")
+        phase = generated_today_info.get("phase","--")
+
+        tk.Label(stats,
+            text=f"🧬 BMI: {bmi}",
+            fg="#00ffaa",
+            bg="#1a1f27",
+            font=("Segoe UI", 10, "bold")
+        ).pack(side="left", padx=10)
+
+        tk.Label(stats,
+            text=f"📈 Phase: {phase}",
+            fg="#ffaa00",
+            bg="#1a1f27",
+            font=("Segoe UI", 10, "bold")
+        ).pack(side="left", padx=10)
+
+        if not generated_today_workout:
+
+            tk.Label(
+                scroll_frame,
+                text="No workout generated yet.\nOpen the Workout Planner.",
+                fg="#cccccc",
                 bg="#1a1f27",
+                font=("Segoe UI", 11)
+            ).pack(pady=20)
+
+            return
+
+        for i, ex in enumerate(generated_today_workout, start=1):
+
+            card = tk.Frame(
+                scroll_frame,
+                bg="#1f2a33",
+                highlightbackground="#00ffcc",
+                highlightthickness=1,
+                padx=12,
+                pady=10
+            )
+            card.pack(fill="x", pady=6)
+
+            tk.Label(
+                card,
+                text=f"{i}. 🏋 {ex['name']}",
+                fg="#ffffff",
+                bg="#1f2a33",
                 font=("Segoe UI", 12, "bold")
-                ).pack(anchor="w")
+            ).pack(anchor="w")
 
-        tk.Label(workout_container,
-                text=f"💪 Today: {current_day} Day",
-                fg="#00ffcc",
-                bg="#1a1f27",
-                font=("Segoe UI", 15, "bold")
-                ).pack(anchor="w", pady=5)
+            desc = ex.get("desc", "No description available.")
 
-        if current_day == "Push":
-            exercises_today = (
-                exercises.get("Chest", []) +
-                exercises.get("Shoulders", []) +
-                exercises.get("Arms", [])
-            )
+            tk.Label(
+                card,
+                text=desc,
+                fg="#bbbbbb",
+                bg="#1f2a33",
+                wraplength=320,
+                justify="left",
+                font=("Segoe UI", 9)
+            ).pack(anchor="w", pady=(2,4))
 
-        elif current_day == "Pull":
-            exercises_today = (
-                exercises.get("Back", []) +
-                exercises.get("Arms", [])
-            )
+            stats = tk.Frame(card, bg="#1f2a33")
+            stats.pack(fill="x")
 
-        elif current_day == "Upper":
-            exercises_today = (
-                exercises.get("Chest", []) +
-                exercises.get("Back", []) +
-                exercises.get("Shoulders", []) +
-                exercises.get("Arms", [])
-            )
+            tk.Label(
+                stats,
+                text=f"🏋 Sets: {ex['sets']}   🔁 Reps: {ex['reps']}",
+                fg="#00ffaa",
+                bg="#1f2a33",
+                font=("Segoe UI", 9, "bold")
+            ).pack(side="left")
 
-        elif current_day == "Lower":
-            exercises_today = exercises.get("Legs", [])
+            tk.Label(
+                stats,
+                text=f"⏱ Rest: {ex['rest']}   🔥 {ex['cal']} kcal",
+                fg="#ffaa00",
+                bg="#1f2a33",
+                font=("Segoe UI", 9)
+            ).pack(side="right")
 
-        elif current_day == "Full":
-            exercises_today = []
-            for m in exercises:
-                exercises_today += exercises[m]
-
-        elif current_day == "Chest/Back":
-            exercises_today = (
-                exercises.get("Chest", []) +
-                exercises.get("Back", [])
-            )
-
-        elif current_day == "Shoulders/Arms":
-            exercises_today = (
-                exercises.get("Shoulders", []) +
-                exercises.get("Arms", [])
-            )
-
-        else:
-            exercises_today = exercises.get(current_day, [])
-
-        # ✅ GRID CONTAINER (2x2 layout)
-        grid_container = tk.Frame(workout_container, bg="#1a1f27")
-        grid_container.pack(fill="both", expand=True, pady=10)
-
-        grid_container.grid_columnconfigure(0, weight=1)
-        grid_container.grid_columnconfigure(1, weight=1)
-        total_calories = 0
-
-        preview_exercises = random.sample(exercises_today, min(4, len(exercises_today)))
-
-        for index, ex in enumerate(preview_exercises):
-
-            name = ex.get("name", "")
-            sets = ex.get("sets", 0)
-            reps = ex.get("reps", 0)
-            muscle = ex.get("muscle", "Main Muscle")
-            rest = ex.get("rest", "60s")
-            tempo = ex.get("tempo", "2-1-2")
-            calories = ex.get("calories", ex.get("cal", 0))
-
-            total_calories += calories
-
-            row = index // 2
-            col = index % 2
-
-            ex_frame = tk.Frame(grid_container, bg="#222831",
-                                highlightbackground="#00ffcc",
-                                highlightthickness=1,
-                                padx=12, pady=10)
-
-            ex_frame.grid(row=row, column=col,
-                        padx=10, pady=10,
-                        sticky="nsew")
-
-            tk.Label(ex_frame,
-                    text=f"🏋️ {name}",
-                    fg="white",
-                    bg="#222831",
-                    font=("Segoe UI", 12, "bold")
-                    ).pack(anchor="w")
-
-            tk.Label(ex_frame,
-                    text=f"📊 {sets} sets x {reps} reps",
-                    fg="#cccccc",
-                    bg="#222831",
-                    font=("Segoe UI", 10)
-                    ).pack(anchor="w", pady=2)
-
-            tk.Label(ex_frame,
-                    text=f"💪 {muscle}",
-                    fg="#aaaaaa",
-                    bg="#222831",
-                    font=("Segoe UI", 9)
-                    ).pack(anchor="w")
-
-            tk.Label(ex_frame,
-                    text=f"🔥 {calories} kcal",
-                    fg="#ff4d4d",
-                    bg="#222831",
-                    font=("Segoe UI", 9, "bold")
-                    ).pack(anchor="w", pady=4)
-
-        tk.Label(workout_container,
-                text=f"🔥 TOTAL ESTIMATED BURN: {total_calories} kcal",
-                fg="#ff4d4d",
-                bg="#1a1f27",
-                font=("Segoe UI", 13, "bold")
-                ).pack(pady=10)
     landing.update_workout_display = update_workout_display
 
     bottom_section = tk.Frame(landing, bg="#0b0f14")
@@ -429,12 +462,21 @@ def build_landing_page(
         lambda: show_frame("workout")
     ).pack(side="left", padx=50)
 
-
     build_macro_page(root, frames, show_frame,
                      foods, images, BASE_DIR, user_info,
                      macro_targets, update_landing_dashboard)
 
-    build_workout_page(root, frames, show_frame,
-                       workout_splits, exercises, BASE_DIR)
+    build_workout_page(
+        root,
+        frames,
+        show_frame,
+        workout_splits,
+        exercises,
+        BASE_DIR,
+        macro_targets,
+        generated_today_workout,
+        generated_today_info,
+        update_landing_dashboard
+    )
 
     return landing

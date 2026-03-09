@@ -4,9 +4,6 @@ from PIL import Image, ImageTk
 import os
 
 
-# =====================================================
-# BUTTON PRESS EFFECT (no hover)
-# =====================================================
 
 def add_button_effect(btn, normal_bg, press_bg):
 
@@ -20,16 +17,12 @@ def add_button_effect(btn, normal_bg, press_bg):
     btn.bind("<ButtonRelease-1>", on_release)
 
 
-# =====================================================
-# MACRO PAGE
-# =====================================================
-
 def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_info, macro_targets, update_landing_dashboard):
 
     macro = tk.Frame(root, bg="#0e0e0e")
     frames["macro"] = macro
 
-    # ---------- Ensure tracking ----------
+ 
     macro_targets.setdefault("p_current", 0)
     macro_targets.setdefault("c_current", 0)
     macro_targets.setdefault("f_current", 0)
@@ -40,7 +33,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
 
     last_added = {"meal": None, "food": None}
 
-    # ---------- Dynamic Macro Goals ----------
+ 
     def calculate_user_macros(user_info):
 
         weight = float(user_info.get("weight", 70))
@@ -79,7 +72,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
     macro_targets["f"] = goals["f"]
     macro_targets["cal"] = goals["cal"]
 
-    # ---------- HEADER ----------
+
     header = tk.Frame(macro, bg="#0e0e0e")
     header.pack(fill="x", padx=20, pady=10)
 
@@ -94,11 +87,11 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
              font=("Arial",26,"bold"),
              fg="#00ff99", bg="#0e0e0e").pack(pady=5)
 
-    # ---------- MAIN TOP AREA ----------
+
     top_container = tk.Frame(macro, bg="#0e0e0e")
     top_container.pack(pady=10)
 
-    # ---------- GAUGES ----------
+
     gauge_frame = tk.Frame(top_container, bg="#1c1c1c", padx=20, pady=10,
                            highlightbackground="#00ffcc", highlightthickness=1)
     gauge_frame.pack(side="left", padx=20)
@@ -147,7 +140,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
     draw_c   = make_gauge("Carbs","🍞",2,"c_current","c","#00ff99")
     draw_f   = make_gauge("Fat","🥑",3,"f_current","f","#ff4444")
 
-    # ---------- MEAL HISTORY PANEL ----------
+ 
     history_frame = tk.Frame(top_container, bg="#1c1c1c", padx=15, pady=10,
                              highlightbackground="#00ffcc", highlightthickness=1)
     history_frame.pack(side="left", padx=20)
@@ -196,7 +189,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
 
             add_button_effect(remove_btn, "#ff4444", "#cc3333")
 
-    # ---------- REFRESH ----------
+
     def refresh():
         draw_cal()
         draw_p()
@@ -205,7 +198,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
         update_history()
         update_landing_dashboard()
 
-    # ---------- ADD FOOD ----------
+
     def add_food(food_name, vals):
 
         meal = current_meal.get()
@@ -231,7 +224,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
 
         refresh()
 
-    # ---------- UNDO ----------
+  
     def undo_last():
 
         meal = last_added["meal"]
@@ -254,7 +247,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
 
         refresh()
 
-    # ---------- MEAL SELECT ----------
+
     meal_frame = tk.Frame(macro, bg="#0e0e0e")
     meal_frame.pack(pady=10)
 
@@ -274,7 +267,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
         )
         rb.pack(side="left", padx=5)
 
-    # ---------- FOOD LIBRARY ----------
+
     tk.Label(macro, text="🍱 FOOD LIBRARY",
              font=("Arial",20,"bold"),
              fg="#00ff99",
@@ -300,13 +293,24 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
     canvas.pack(side="left", fill="both", expand=True)
     scroll.pack(side="right", fill="y")
 
-    # ---------- MOUSE WHEEL SCROLL ----------
+
+    # ==========================================================
+    # FIXED SCROLL FUNCTION
+    # ==========================================================
+
     def _on_mousewheel(event):
         canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
-    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+    def _bind_scroll(e):
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
-    # ---------- FOOD CARDS ----------
+    def _unbind_scroll(e):
+        canvas.unbind_all("<MouseWheel>")
+
+    canvas.bind("<Enter>", _bind_scroll)
+    canvas.bind("<Leave>", _unbind_scroll)
+
+
     max_cols = 8
     row = col = 0
 
@@ -366,7 +370,7 @@ def build_macro_page(root, frames, show_frame, foods, images, BASE_DIR, user_inf
             col = 0
             row += 1
 
-    # ---------- SAVE ----------
+
     def save_meals():
         messagebox.showinfo("Saved","Meals saved!")
 
